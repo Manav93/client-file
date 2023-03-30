@@ -8,7 +8,7 @@ var comp_no = process.env.COMP_NO,
   comp_ip = "",
   lab_no = process.env.LAB_NO+"",
   college = process.env.COLLEGE+"",
-  branch = process.env.BRANCH+"";
+  department = process.env.BRANCH+"";
 
 socket.on("connect", () => {
   console.log("connected to server");
@@ -18,11 +18,11 @@ socket.on("retransmit", (data) => {
   console.log(data.lab_no, lab_no, "retransmit");
   if (data.lab_no == lab_no) {
     console.log("retransmit");
-    socket.emit("client", { comp_no, lab_no , college , department:branch});
+    socket.emit("client", { comp_no, lab_no , college , department});
   }
 });
 
-socket.emit("client", { comp_no, lab_no ,college , department:branch });
+socket.emit("client", { comp_no, lab_no ,college , department });
 
 socket.on("command", (data) => {
   exec(data.command, (error, stdout, stderr) => {
@@ -78,6 +78,8 @@ const detectPendrive = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         } else {
           socket.emit("change", {
@@ -87,6 +89,8 @@ const detectPendrive = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         }
       } else if (JSON.stringify(old_pendrive) !== JSON.stringify(pendrive)) {
@@ -103,6 +107,8 @@ const detectPendrive = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         } else {
           let inserted, removed;
@@ -122,6 +128,8 @@ const detectPendrive = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           } else if (
             JSON.stringify(old_pendrive).length <
@@ -139,6 +147,8 @@ const detectPendrive = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           } else {
             socket.emit("change", {
@@ -149,6 +159,8 @@ const detectPendrive = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           }
         }
@@ -185,6 +197,8 @@ const detectMouse = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         } else {
           socket.emit("change", {
@@ -194,6 +208,8 @@ const detectMouse = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         }
       } else if (JSON.stringify(old_mouse) !== JSON.stringify(mouse)) {
@@ -205,6 +221,8 @@ const detectMouse = () => {
             comp_no: comp_no,
             comp_ip: comp_ip,
             lab_no,
+            college,
+            department
           });
         } else {
           let inserted, removed;
@@ -223,6 +241,8 @@ const detectMouse = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           } else if (
             JSON.stringify(old_mouse).length < JSON.stringify(mouse).length
@@ -239,6 +259,8 @@ const detectMouse = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           } else {
             socket.emit("change", {
@@ -249,6 +271,8 @@ const detectMouse = () => {
               comp_no: comp_no,
               comp_ip: comp_ip,
               lab_no,
+              college,
+              department
             });
           }
         }
@@ -282,6 +306,8 @@ const detectKeyboard = () => {
         comp_no,
         comp_ip,
         lab_no,
+        college,
+        department
       });
     } else if (JSON.stringify(old_keyboard) !== JSON.stringify(keyboard)) {
       if (JSON.stringify(keyboard) === JSON.stringify({})) {
@@ -292,6 +318,8 @@ const detectKeyboard = () => {
           comp_no,
           comp_ip,
           lab_no,
+          college,
+          department
         });
       } else {
         let inserted, removed;
@@ -310,6 +338,8 @@ const detectKeyboard = () => {
             comp_no,
             comp_ip,
             lab_no,
+            college,
+            department
           });
         } else if (
           JSON.stringify(old_keyboard).length < JSON.stringify(keyboard).length
@@ -326,6 +356,8 @@ const detectKeyboard = () => {
             comp_no,
             comp_ip,
             lab_no,
+            college,
+            department
           });
         } else {
           socket.emit("change", {
@@ -336,6 +368,8 @@ const detectKeyboard = () => {
             comp_no,
             comp_ip,
             lab_no,
+            college,
+            department
           });
         }
       }
@@ -354,6 +388,21 @@ const detectPrinter = () => {
         return;
       }
       var info = stdout.trim();
+
+      var printer = {};
+      if(JSON.stringify(old_printer) != JSON.stringify(printer)){
+        socket.emit("change", {
+          type: "printer",
+          event: "changed",
+          lengthOfData: Object.keys(printer).length,
+          item: printer,
+          comp_no,
+          comp_ip,
+          lab_no,
+          college,
+          department,
+        });
+      }
     }
   );
 };
