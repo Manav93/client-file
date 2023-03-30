@@ -3,12 +3,12 @@ const io = require("socket.io-client");
 const dotenv = require("dotenv");
 dotenv.config({ path: "./config.env" });
 console.log(`${process.env.IP}`, "ip");
-const socket = io(`${process.env.IP}`);
-var comp_no = `${process.env.COMP_NO}`,
+const socket = io("http://"+process.env.IP+":"+process.env.PORT);
+var comp_no = process.env.COMP_NO,
   comp_ip = "",
-  lab_no = `${process.env.LAB_NO}`,
-  college = `${process.env.COLLEGE}`,
-  branch = `${process.env.BRANCH}`;
+  lab_no = process.env.LAB_NO+"",
+  college = process.env.COLLEGE+"",
+  branch = process.env.BRANCH+"";
 
 socket.on("connect", () => {
   console.log("connected to server");
@@ -18,11 +18,11 @@ socket.on("retransmit", (data) => {
   console.log(data.lab_no, lab_no, "retransmit");
   if (data.lab_no == lab_no) {
     console.log("retransmit");
-    socket.emit("client", { comp_no, lab_no });
+    socket.emit("client", { comp_no, lab_no , college , department:branch});
   }
 });
 
-socket.emit("client", { comp_no, lab_no });
+socket.emit("client", { comp_no, lab_no ,college , department:branch });
 
 socket.on("command", (data) => {
   exec(data.command, (error, stdout, stderr) => {
@@ -395,7 +395,7 @@ detectPrinter();
 socket.on("askDeviceInfo", (data) => {
   console.log("got request on client");
   console.log("askDeviceInfo", data);
-  socket.emit("deviceInfo", globalJSON);
+  socket.emit("deviceInfo", {data:globalJSON,sendTo:data.askedBy});
   console.log("sent deviceInfo", globalJSON);
 });
 
