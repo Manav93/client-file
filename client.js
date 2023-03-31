@@ -1,7 +1,7 @@
 const { exec } = require("child_process");
 const io = require("socket.io-client");
 const dotenv = require("dotenv");
-dotenv.config({ path: "./config.env" });
+dotenv.config({ path: "C:/client-file/config.env" });
 console.log(`${process.env.IP}`, "ip");
 const socket = io("http://"+process.env.IP+":"+process.env.PORT);
 var comp_no = process.env.COMP_NO,
