@@ -3,7 +3,7 @@ const io = require("socket.io-client");
 const dotenv = require("dotenv");
 const fs = require("fs");
 const path = require("path");
-dotenv.config({ path: "./config.env" });
+dotenv.config({ path: "c:/client-file/config.env" });
 console.log(`${process.env.IP}`, "ip");
 const socket = io("http://" + process.env.IP + ":" + process.env.PORT);
 var comp_no = process.env.COMP_NO,
