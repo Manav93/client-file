@@ -1,14 +1,181 @@
 const { exec } = require("child_process");
 const io = require("socket.io-client");
 const dotenv = require("dotenv");
-dotenv.config({ path: "C:/client-file/config.env" });
+const fs = require("fs");
+const path = require("path");
+dotenv.config({ path: "./config.env" });
 console.log(`${process.env.IP}`, "ip");
-const socket = io("http://"+process.env.IP+":"+process.env.PORT);
+const socket = io("http://" + process.env.IP + ":" + process.env.PORT);
 var comp_no = process.env.COMP_NO,
   comp_ip = "",
-  lab_no = process.env.LAB_NO+"",
-  college = process.env.COLLEGE+"",
-  department = process.env.BRANCH+"";
+  lab_no = process.env.LAB_NO + "",
+  college = process.env.COLLEGE + "",
+  department = process.env.BRANCH + "";
+let isDriveFound = false;
+let drive_letter;
+let currentPendrive = {};
+let updatedPendrive = {};
+let currentMouse = {};
+let updatedMouse = {};
+let currentKeyboard = {};
+let updatedKeyboard = {};
+let userName ="manav";
+
+// i need username using whoami command synchroneously for my purpose
+// i need to get the username of the user who is logged in
+/// console.log(userName,"outside");
+
+console.log(`C:\\Users\\${userName}\\Desktop\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\run.bat`);
+
+const startupFolder = path.join(
+  process.env.APPDATA,
+  "Microsoft",
+  "Windows",
+  "Start Menu",
+  "Programs",
+  "Startup"
+);
+const filePath = path.join(startupFolder, "run.bat");
+
+fs.watch(`${startupFolder}\\`, { recursive: true }, (eventType, filename) => {
+  // console.log(`File or directory ${filename} has been ${eventType}`);
+  if (fs.existsSync(filePath)) {
+    console.log("run.bat found in startup folder");
+  } else {
+    console.log("run.bat not found in startup folder");
+    socket.emit("change", {
+      type: "Critical File Change",
+      event: "deleted",
+      item: "run.bat",
+      comp_no: comp_no,
+      comp_ip: comp_ip,
+      lab_no,
+      college,
+      department,
+      critical: true,
+    });
+  }
+});
+
+if (fs.existsSync(filePath)) {
+  console.log("run.bat found in startup folder");
+} else {
+  // console.log("run.bat not found in startup folder");
+  socket.emit("change", {
+    type: "Critical File Change",
+    event: "deleted",
+    item: "run.bat",
+    comp_no: comp_no,
+    comp_ip: comp_ip,
+    lab_no,
+    college,
+    department,
+    critical: true,
+  });
+}
+if(!fs.existsSync("C:\\client-file")){
+  console.log("client-file not exist");
+  socket.emit("change",{
+    type:"Critical File Change",
+    event:"deleted",
+    item:"client-file",
+    comp_no:comp_no,
+    comp_ip:comp_ip,
+    lab_no,
+    college,
+    department,
+    critical:true
+  });
+}else{
+  fs.watch("C:\\client-file", { recursive: true }, (eventType, filename) => {
+    if(!fs.existsSync("C:\\client-file\\config.env")){
+      console.log("config file not exist");
+      socket.emit("change",{
+    type:"Critical File Change",
+    event:"deleted",
+    item:"config.env",
+    comp_no:comp_no,
+    comp_ip:comp_ip,
+    lab_no,
+    college,
+    department,
+    critical:true
+    });
+  }
+  if(!fs.existsSync("C:\\client-file\\client.js")){
+    console.log("client js file not exist");
+    socket.emit("change",{
+  type:"Critical File Change",
+  event:"deleted",
+  item:"client.js",
+  comp_no:comp_no,
+  comp_ip:comp_ip,
+  lab_no,
+  college,
+  department,
+  critical:true
+    });
+  }
+});
+}
+function createWatch(dirName) {
+  console.log("watching", dirName);
+  fs.watch(`${dirName}\\`, { recursive: true }, (eventType, filename) => {
+    console.log(`File or directory ${filename} has been ${eventType}`);
+    // console.log(`${dirName} has been ${eventType} for ${filename}`);
+    if (eventType === "rename") {
+      let oldPath = path.join(dirName, filename);
+      let newPath = path.join(dirName, filename);
+      if (!fs.existsSync(newPath)) {
+        // console.log(`${oldPath} moved out of the pendrive or deleted.`);
+        socket.emit("change", {
+          type: "pendrive modification",
+          // type: device,
+          event: "removed",
+          // lengthOfData: removedDevice.length,
+          item: `${filename}`,
+          comp_no: comp_no,
+          comp_ip: comp_ip,
+          lab_no,
+          college,
+          department,
+        });
+      } else {
+        fs.stat(`${dirName}\\${filename}`, (err, stats) => {
+          if (stats.size === 0) {
+            // console.log(`${filename} is created`);
+            socket.emit("change", {
+              type: "pendrive modification",
+              // type: device,
+              event: "created",
+              // lengthOfData: removedDevice.length,
+              item: `${filename}`,
+              comp_no: comp_no,
+              comp_ip: comp_ip,
+              lab_no,
+              college,
+              department,
+            });
+          } else {
+            // console.log(`${filename} is Pasted`);
+            socket.emit("change", {
+              type: "pendrive modification",
+              // type: device,
+              event: "pasted something",
+              // lengthOfData: removedDevice.length,
+              item: `${filename}`,
+              comp_no: comp_no,
+              comp_ip: comp_ip,
+              lab_no,
+              college,
+              department,
+            });
+          }
+        });
+      }
+    }
+  });
+}
 
 socket.on("connect", () => {
   console.log("connected to server");
@@ -18,30 +185,113 @@ socket.on("retransmit", (data) => {
   console.log(data.lab_no, lab_no, "retransmit");
   if (data.lab_no == lab_no) {
     console.log("retransmit");
-    socket.emit("client", { comp_no, lab_no , college , department});
+    socket.emit("client", { comp_no, lab_no, college, department });
   }
 });
 
-socket.emit("client", { comp_no, lab_no ,college , department });
+socket.emit("client", { comp_no, lab_no, college, department });
 
 socket.on("command", (data) => {
-  exec(data.command, (error, stdout, stderr) => {
+  exec(`${data.data}`, (error, stdout, stderr) => {
+    console.log(error,stdout,stderr);
+    if(stderr){
+      socket.emit("output", {data:stderr,askedBy:data.askedBy});
+    }else{
+      socket.emit("output", {data:stdout,askedBy:data.askedBy});
+    }
     if (error) {
       console.error(`exec error: ${error}`);
+      socket.emit("output", {data:"Oops something went wrong",askedBy:data.askedBy});
       return;
     }
-    socket.emit("output", stdout);
   });
 });
 
 let globalJSON = {};
-let old_pendrive = {};
-let old_mouse = {};
-let old_keyboard = {};
-let old_printer = {};
-let old_ip = {};
-let just_started = true;
+const detectChangeAndEmit = (updatedDevice, currentDevice, device) => {
+  // console.log(updatedDevice, "updated device",currentDevice, "current device");
+  let insertedDevice = [];
+  let removedDevice = [];
 
+  Object.values(updatedDevice).forEach((device) => {
+    if (!Object.values(currentDevice).includes(device)) {
+      // console.log("inserted=========================", device);
+      insertedDevice.push(device);
+    }
+  });
+  Object.values(currentDevice).forEach((device) => {
+    if (!Object.values(updatedDevice).includes(device)) {
+      removedDevice.push(device);
+    }
+  });
+  // console.log(insertedDevice, "inserted device");
+  // console.log(removedDevice, "removed device");
+  if (removedDevice.length) {
+    let temp = {};
+    let counter = 1;
+    removedDevice.map((item) => {
+      temp[`item${counter++}`] = item;
+    });
+    // if (device == "Pendrive") {
+    //   isDriveFound = false;
+    //   console.log("pendrive removed");
+    // }
+    socket.emit("change", {
+      type: device,
+      event: "removed",
+      lengthOfData: removedDevice.length,
+      item: temp,
+      comp_no: comp_no,
+      comp_ip: comp_ip,
+      lab_no,
+      college,
+      department,
+    });
+  }
+  // console.log(insertedDevice, "inserted device");
+  if (insertedDevice.length) {
+    if (device == "Pendrive") {
+      exec("wmic logicaldisk get name", (error, stdout, stderr) => {
+        // console.log("found",stdout);
+        const arr = stdout.trim().split("\n");
+        // console.log("current pendrive",globalJSON.pendrive);
+        // console.log("watching",)
+        // console.log("Watchable",);
+        const total = arr.length;
+        const inbuilt = total - Object.keys(globalJSON.pendrive).length;
+        // console.log("inbuilt",inbuilt,total,Object.keys(globalJSON.pendrive).length);
+        arr.forEach((item, index) => {
+          if (index >= inbuilt && !isDriveFound) {
+            console.log("found", item.trim());
+            drive_letter = item.trim();
+            isDriveFound = true;
+            createWatch(item.trim());
+          }
+        });
+      });
+    }
+    // console.log("Here");
+    let temp = {};
+    let counter = 1;
+    insertedDevice.map((item) => {
+      temp[`item${counter++}`] = item;
+    });
+    socket.emit("change", {
+      type: device,
+      event: "insert",
+      lengthOfData: insertedDevice.length,
+      item: temp,
+      comp_no: comp_no,
+      comp_ip: comp_ip,
+      lab_no,
+      college,
+      department,
+    });
+  }
+  insertedDevice = [];
+  removedDevice = [];
+  // console.log(insertedDevice, "inserted device");
+};
 const detectPendrive = () => {
   exec(
     "wmic diskdrive where \"InterfaceType='USB'\" get Caption,Size",
@@ -50,11 +300,11 @@ const detectPendrive = () => {
         console.error(`exec error: ${error}`);
         return;
       }
-      const [caption, size] = stdout.trim().split("\n");
-      const pendrive = {};
+
       const name = stdout.trim().split("\n");
       let temp, size1;
       for (let i = 1; i < name.length; i++) {
+        // console.log();
         temp = name[i].split("  ").filter((item) => item.trim() !== "");
         if (!isNaN(temp[1].trim())) {
           size1 = temp[1].trim() / 1024 / 1024 / 1024;
@@ -62,111 +312,15 @@ const detectPendrive = () => {
         } else {
           size1 = temp[1].trim();
         }
-        pendrive[`item${i}`] = temp[0].trim() + " (" + size1 + "GB)";
+        updatedPendrive[`item${i}`] = temp[0].trim() + " (" + size1 + "GB)";
       }
-      if (
-        JSON.stringify(old_pendrive) == JSON.stringify({}) &&
-        JSON.stringify(pendrive) !== JSON.stringify({})
-      ) {
-        old_pendrive = pendrive;
-        if (just_started) {
-          socket.emit("change", {
-            type: "pendrive",
-            event: "insert",
-            lengthOfData: Object.keys(pendrive).length,
-            item: pendrive,
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else {
-          socket.emit("change", {
-            type: "pendrive",
-            event: "insert",
-            item: pendrive.item1,
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        }
-      } else if (JSON.stringify(old_pendrive) !== JSON.stringify(pendrive)) {
-        if (JSON.stringify(pendrive) === JSON.stringify({})) {
-          for (key in old_pendrive) {
-            if (pendrive[key] !== old_pendrive[key]) {
-              removed = key;
-            }
-          }
-          socket.emit("change", {
-            type: "pendrive",
-            event: "removed",
-            item: old_pendrive[removed],
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else {
-          let inserted, removed;
-          if (
-            JSON.stringify(old_pendrive).length >=
-            JSON.stringify(pendrive).length
-          ) {
-            for (key in old_pendrive) {
-              if (!pendrive[key]) {
-                removed = key;
-              }
-            }
-            socket.emit("change", {
-              type: "pendrive",
-              event: "removed",
-              item: old_pendrive[removed],
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          } else if (
-            JSON.stringify(old_pendrive).length <
-            JSON.stringify(pendrive).length
-          ) {
-            for (key in pendrive) {
-              if (!old_pendrive[key]) {
-                inserted = key;
-              }
-            }
-            socket.emit("change", {
-              type: "pendrive",
-              event: "insert",
-              item: pendrive[inserted],
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          } else {
-            socket.emit("change", {
-              type: "pendrive",
-              event: "changed",
-              lengthOfData: Object.keys(pendrive).length,
-              item,
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          }
-        }
-        old_pendrive = pendrive;
-      }
-      globalJSON.pendrive = pendrive;
+      // currentPendrive = updatedPendrive;
+      detectChangeAndEmit(updatedPendrive, currentPendrive, "Pendrive");
+      currentPendrive = updatedPendrive;
+      // console.log(currentPendrive, "current pendrive@@@",updatedPendrive);
+      updatedPendrive = {};
+      globalJSON.pendrive = currentPendrive;
+      // detectChangeAndEmit(updatedPendrive, currentPendrive, "pendrive");
     }
   );
 };
@@ -180,105 +334,17 @@ const detectMouse = () => {
         return;
       }
       const name = stdout.trim().split("\n");
-      const mouse = {};
       name.forEach((element, index) => {
         if (element && element.trim() !== "Caption") {
-          mouse[`item${index}`] = element.trim();
+          updatedMouse[`item${index}`] = element.trim();
         }
       });
-      if (JSON.stringify(old_mouse) === JSON.stringify({})) {
-        old_mouse = mouse;
-        if (just_started) {
-          socket.emit("change", {
-            type: "mouse",
-            event: "insert",
-            lengthOfData: Object.keys(mouse).length,
-            item: mouse,
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else {
-          socket.emit("change", {
-            type: "mouse",
-            event: "insert",
-            item: mouse.item1,
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        }
-      } else if (JSON.stringify(old_mouse) !== JSON.stringify(mouse)) {
-        if (JSON.stringify(mouse) === JSON.stringify({})) {
-          socket.emit("change", {
-            type: "mouse",
-            event: "removed",
-            item: old_mouse.item1,
-            comp_no: comp_no,
-            comp_ip: comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else {
-          let inserted, removed;
-          if (
-            JSON.stringify(old_mouse).length >= JSON.stringify(mouse).length
-          ) {
-            for (key in old_mouse) {
-              if (!mouse[key]) {
-                removed = key;
-              }
-            }
-            socket.emit("change", {
-              type: "mouse",
-              event: "removed",
-              item: old_mouse[removed],
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          } else if (
-            JSON.stringify(old_mouse).length < JSON.stringify(mouse).length
-          ) {
-            for (key in mouse) {
-              if (!old_mouse[key]) {
-                inserted = key;
-              }
-            }
-            socket.emit("change", {
-              type: "mouse",
-              event: "insert",
-              item: mouse[inserted],
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          } else {
-            socket.emit("change", {
-              type: "mouse",
-              event: "changed",
-              lengthOfData: Object.keys(mouse).length,
-              item,
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department
-            });
-          }
-        }
-        old_mouse = mouse;
-      }
-      globalJSON.mouse = mouse;
+
+      detectChangeAndEmit(updatedMouse, currentMouse, "Mouse");
+      currentMouse = updatedMouse;
+      updatedMouse = {};
+
+      globalJSON.mouse = currentMouse;
     }
   );
 };
@@ -293,93 +359,20 @@ const detectKeyboard = () => {
     const keyboard = {};
     name.forEach((element, index) => {
       if (element && element.trim() !== "Caption") {
-        keyboard[`item${index}`] = element.trim();
+        updatedKeyboard[`item${index}`] = element.trim();
       }
     });
-    if (JSON.stringify(old_keyboard) === JSON.stringify({})) {
-      old_keyboard = keyboard;
-      socket.emit("change", {
-        type: "keyboard",
-        event: "insert",
-        lengthOfData: Object.keys(keyboard).length,
-        item: keyboard,
-        comp_no,
-        comp_ip,
-        lab_no,
-        college,
-        department
-      });
-    } else if (JSON.stringify(old_keyboard) !== JSON.stringify(keyboard)) {
-      if (JSON.stringify(keyboard) === JSON.stringify({})) {
-        socket.emit("change", {
-          type: "keyboard",
-          event: "removed",
-          item: old_keyboard.item1,
-          comp_no,
-          comp_ip,
-          lab_no,
-          college,
-          department
-        });
-      } else {
-        let inserted, removed;
-        if (
-          JSON.stringify(old_keyboard).length >= JSON.stringify(keyboard).length
-        ) {
-          for (key in old_keyboard) {
-            if (!keyboard[key]) {
-              removed = key;
-            }
-          }
-          socket.emit("change", {
-            type: "keyboard",
-            event: "removed",
-            item: old_keyboard[removed],
-            comp_no,
-            comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else if (
-          JSON.stringify(old_keyboard).length < JSON.stringify(keyboard).length
-        ) {
-          for (key in keyboard) {
-            if (!old_keyboard[key]) {
-              inserted = key;
-            }
-          }
-          socket.emit("change", {
-            type: "keyboard",
-            event: "insert",
-            item: keyboard[inserted],
-            comp_no,
-            comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        } else {
-          socket.emit("change", {
-            type: "keyboard",
-            event: "changed",
-            lengthOfData: Object.keys(keyboard).length,
-            item: keyboard,
-            comp_no,
-            comp_ip,
-            lab_no,
-            college,
-            department
-          });
-        }
-      }
-    }
-    old_keyboard = keyboard;
-    globalJSON.keyboard = keyboard;
+
+    detectChangeAndEmit(updatedKeyboard, currentKeyboard, "Keyboard");
+    currentKeyboard = updatedKeyboard;
+    updatedKeyboard = {};
+    globalJSON.keyboard = currentKeyboard;
   });
 };
 
 const detectPrinter = () => {
+  let old_printer = {};
+  let printer = {};
   exec(
     "wmic printer where \"portname like 'USB%'\" get name, portname, drivername",
     (error, stdout, stderr) => {
@@ -390,7 +383,7 @@ const detectPrinter = () => {
       var info = stdout.trim();
 
       var printer = {};
-      if(JSON.stringify(old_printer) != JSON.stringify(printer)){
+      if (JSON.stringify(old_printer) != JSON.stringify(printer)) {
         socket.emit("change", {
           type: "printer",
           event: "changed",
@@ -408,6 +401,7 @@ const detectPrinter = () => {
 };
 
 const detectIP = () => {
+  let old_ip;
   exec('ipconfig | findstr /i  "ipv4"', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -435,6 +429,7 @@ const detectIP = () => {
     globalJSON.ip = ip;
   });
 };
+
 detectIP();
 detectPendrive();
 detectMouse();
@@ -444,11 +439,11 @@ detectPrinter();
 socket.on("askDeviceInfo", (data) => {
   console.log("got request on client");
   console.log("askDeviceInfo", data);
-  socket.emit("deviceInfo", {data:globalJSON,sendTo:data.askedBy});
+  socket.emit("deviceInfo", { data: globalJSON, sendTo: data.askedBy });
   console.log("sent deviceInfo", globalJSON);
 });
 
-const time = 1000;
+const time = 3000;
 setInterval(detectPendrive, time);
 setInterval(detectMouse, time);
 setInterval(detectKeyboard, time);
