@@ -3,9 +3,10 @@ const io = require("socket.io-client");
 const dotenv = require("dotenv");
 const fs = require("fs");
 const path = require("path");
-dotenv.config({ path: "c:/client-file/config.env" });
-console.log(`${process.env.IP}`, "ip");
+const { exit } = require("process");
+dotenv.config({ path: "./config.env" });
 const socket = io("http://" + process.env.IP + ":" + process.env.PORT);
+
 var comp_no = process.env.COMP_NO,
   comp_ip = "",
   lab_no = process.env.LAB_NO + "",
@@ -19,13 +20,25 @@ let currentMouse = {};
 let updatedMouse = {};
 let currentKeyboard = {};
 let updatedKeyboard = {};
-let userName ="manav";
 
-// i need username using whoami command synchroneously for my purpose
-// i need to get the username of the user who is logged in
-/// console.log(userName,"outside");
 
-console.log(`C:\\Users\\${userName}\\Desktop\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\run.bat`);
+const sendChangeSocket = (type,event,lengthOfData=1,item,critical) => {
+  socket.emit("change", {
+		type,
+		event,
+		lengthOfData,
+		item,
+		comp_no,
+		comp_ip,
+		lab_no,
+		college,
+		department,
+		critical,
+		date: `${new Date().getTime()}`,
+		time: `${new Date().toLocaleTimeString("en-US", { hour12: true })}`,
+	});
+}
+
 
 const startupFolder = path.join(
   process.env.APPDATA,
@@ -35,141 +48,42 @@ const startupFolder = path.join(
   "Programs",
   "Startup"
 );
-const filePath = path.join(startupFolder, "run.bat");
+const filePath = path.join(startupFolder, "run.vbs");
 
 fs.watch(`${startupFolder}\\`, { recursive: true }, (eventType, filename) => {
-  // console.log(`File or directory ${filename} has been ${eventType}`);
-  if (fs.existsSync(filePath)) {
-    console.log("run.bat found in startup folder");
-  } else {
-    console.log("run.bat not found in startup folder");
-    socket.emit("change", {
-      type: "Critical File Change",
-      event: "deleted",
-      item: "run.bat",
-      comp_no: comp_no,
-      comp_ip: comp_ip,
-      lab_no,
-      college,
-      department,
-      critical: true,
-    });
+  if (!fs.existsSync(filePath)) {
+    sendChangeSocket("Critical File Change","deleted","run file",true);
   }
 });
 
-if (fs.existsSync(filePath)) {
-  console.log("run.bat found in startup folder");
-} else {
-  // console.log("run.bat not found in startup folder");
-  socket.emit("change", {
-    type: "Critical File Change",
-    event: "deleted",
-    item: "run.bat",
-    comp_no: comp_no,
-    comp_ip: comp_ip,
-    lab_no,
-    college,
-    department,
-    critical: true,
-  });
+if (!fs.existsSync(filePath)) {
+  sendChangeSocket("Critical File Change","deleted","run file",true);
 }
 if(!fs.existsSync("C:\\client-file")){
-  console.log("client-file not exist");
-  socket.emit("change",{
-    type:"Critical File Change",
-    event:"deleted",
-    item:"client-file",
-    comp_no:comp_no,
-    comp_ip:comp_ip,
-    lab_no,
-    college,
-    department,
-    critical:true
-  });
+  sendChangeSocket("Critical File Change","deleted","client-file",true);
 }else{
   fs.watch("C:\\client-file", { recursive: true }, (eventType, filename) => {
     if(!fs.existsSync("C:\\client-file\\config.env")){
-      console.log("config file not exist");
-      socket.emit("change",{
-    type:"Critical File Change",
-    event:"deleted",
-    item:"config.env",
-    comp_no:comp_no,
-    comp_ip:comp_ip,
-    lab_no,
-    college,
-    department,
-    critical:true
-    });
+      sendChangeSocket("Critical File Change","deleted","config.env",true);
   }
   if(!fs.existsSync("C:\\client-file\\client.js")){
-    console.log("client js file not exist");
-    socket.emit("change",{
-  type:"Critical File Change",
-  event:"deleted",
-  item:"client.js",
-  comp_no:comp_no,
-  comp_ip:comp_ip,
-  lab_no,
-  college,
-  department,
-  critical:true
-    });
+    sendChangeSocket("Critical File Change","deleted","client.js",true);
   }
 });
 }
 function createWatch(dirName) {
-  console.log("watching", dirName);
   fs.watch(`${dirName}\\`, { recursive: true }, (eventType, filename) => {
-    console.log(`File or directory ${filename} has been ${eventType}`);
-    // console.log(`${dirName} has been ${eventType} for ${filename}`);
     if (eventType === "rename") {
       let oldPath = path.join(dirName, filename);
       let newPath = path.join(dirName, filename);
       if (!fs.existsSync(newPath)) {
-        // console.log(`${oldPath} moved out of the pendrive or deleted.`);
-        socket.emit("change", {
-          type: "pendrive modification",
-          // type: device,
-          event: "removed",
-          // lengthOfData: removedDevice.length,
-          item: `${filename}`,
-          comp_no: comp_no,
-          comp_ip: comp_ip,
-          lab_no,
-          college,
-          department,
-        });
+        sendChangeSocket("pendrive modification on" + dirName, "removed", filename, false);
       } else {
         fs.stat(`${dirName}\\${filename}`, (err, stats) => {
           if (stats.size === 0) {
-            // console.log(`${filename} is created`);
-            socket.emit("change", {
-              type: "pendrive modification",
-              // type: device,
-              event: "created",
-              // lengthOfData: removedDevice.length,
-              item: `${filename}`,
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department,
-            });
+            sendChangeSocket("pendrive modification on" + dirName, "created", filename, false);
           } else {
-            // console.log(`${filename} is Pasted`);
-            socket.emit("change", {
-              type: "pendrive modification",
-              // type: device,
-              event: "pasted something",
-              // lengthOfData: removedDevice.length,
-              item: `${filename}`,
-              comp_no: comp_no,
-              comp_ip: comp_ip,
-              lab_no,
-              college,
-              department,
-            });
+            sendChangeSocket("pendrive modification on" + dirName, "pasted something", filename, false);
           }
         });
       }
@@ -182,22 +96,27 @@ socket.on("connect", () => {
 });
 
 socket.on("retransmit", (data) => {
-  console.log(data.lab_no, lab_no, "retransmit");
   if (data.lab_no == lab_no) {
-    console.log("retransmit");
     socket.emit("client", { comp_no, lab_no, college, department });
   }
 });
 
 socket.emit("client", { comp_no, lab_no, college, department });
 
+socket.on("duplicate",(nullObj)=>{
+  console.log("so i am duplicate ahhhhh who started before me bad people 🥺🥺🥺🥺🥺");
+  exit();
+})
+
 socket.on("command", (data) => {
   exec(`${data.data}`, (error, stdout, stderr) => {
     console.log(error,stdout,stderr);
     if(stderr){
       socket.emit("output", {data:stderr,askedBy:data.askedBy});
+      sendChangeSocket("Code output",stdout,data.data,false);
     }else{
       socket.emit("output", {data:stdout,askedBy:data.askedBy});
+      sendChangeSocket("Code output",stdout,data.data,false);
     }
     if (error) {
       console.error(`exec error: ${error}`);
@@ -208,14 +127,12 @@ socket.on("command", (data) => {
 });
 
 let globalJSON = {};
-const detectChangeAndEmit = (updatedDevice, currentDevice, device) => {
-  // console.log(updatedDevice, "updated device",currentDevice, "current device");
+const detectChangeAndEmit = (updatedDevice, currentDevice, device_name) => {
   let insertedDevice = [];
   let removedDevice = [];
 
   Object.values(updatedDevice).forEach((device) => {
     if (!Object.values(currentDevice).includes(device)) {
-      // console.log("inserted=========================", device);
       insertedDevice.push(device);
     }
   });
@@ -224,45 +141,22 @@ const detectChangeAndEmit = (updatedDevice, currentDevice, device) => {
       removedDevice.push(device);
     }
   });
-  // console.log(insertedDevice, "inserted device");
-  // console.log(removedDevice, "removed device");
   if (removedDevice.length) {
     let temp = {};
     let counter = 1;
     removedDevice.map((item) => {
       temp[`item${counter++}`] = item;
     });
-    // if (device == "Pendrive") {
-    //   isDriveFound = false;
-    //   console.log("pendrive removed");
-    // }
-    socket.emit("change", {
-      type: device,
-      event: "removed",
-      lengthOfData: removedDevice.length,
-      item: temp,
-      comp_no: comp_no,
-      comp_ip: comp_ip,
-      lab_no,
-      college,
-      department,
-    });
+    sendChangeSocket(device_name,`removed ${device_name}`,removedDevice.length,temp,false);
   }
-  // console.log(insertedDevice, "inserted device");
   if (insertedDevice.length) {
-    if (device == "Pendrive") {
+    if (device_name == "Pendrive") {
       exec("wmic logicaldisk get name", (error, stdout, stderr) => {
-        // console.log("found",stdout);
         const arr = stdout.trim().split("\n");
-        // console.log("current pendrive",globalJSON.pendrive);
-        // console.log("watching",)
-        // console.log("Watchable",);
         const total = arr.length;
         const inbuilt = total - Object.keys(globalJSON.pendrive).length;
-        // console.log("inbuilt",inbuilt,total,Object.keys(globalJSON.pendrive).length);
         arr.forEach((item, index) => {
           if (index >= inbuilt && !isDriveFound) {
-            console.log("found", item.trim());
             drive_letter = item.trim();
             isDriveFound = true;
             createWatch(item.trim());
@@ -270,27 +164,15 @@ const detectChangeAndEmit = (updatedDevice, currentDevice, device) => {
         });
       });
     }
-    // console.log("Here");
     let temp = {};
     let counter = 1;
     insertedDevice.map((item) => {
       temp[`item${counter++}`] = item;
     });
-    socket.emit("change", {
-      type: device,
-      event: "insert",
-      lengthOfData: insertedDevice.length,
-      item: temp,
-      comp_no: comp_no,
-      comp_ip: comp_ip,
-      lab_no,
-      college,
-      department,
-    });
+    sendChangeSocket(device_name,`inserted ${device_name}`,insertedDevice.length,temp,false);
   }
   insertedDevice = [];
   removedDevice = [];
-  // console.log(insertedDevice, "inserted device");
 };
 const detectPendrive = () => {
   exec(
@@ -300,11 +182,9 @@ const detectPendrive = () => {
         console.error(`exec error: ${error}`);
         return;
       }
-
       const name = stdout.trim().split("\n");
       let temp, size1;
       for (let i = 1; i < name.length; i++) {
-        // console.log();
         temp = name[i].split("  ").filter((item) => item.trim() !== "");
         if (!isNaN(temp[1].trim())) {
           size1 = temp[1].trim() / 1024 / 1024 / 1024;
@@ -314,13 +194,10 @@ const detectPendrive = () => {
         }
         updatedPendrive[`item${i}`] = temp[0].trim() + " (" + size1 + "GB)";
       }
-      // currentPendrive = updatedPendrive;
       detectChangeAndEmit(updatedPendrive, currentPendrive, "Pendrive");
       currentPendrive = updatedPendrive;
-      // console.log(currentPendrive, "current pendrive@@@",updatedPendrive);
       updatedPendrive = {};
       globalJSON.pendrive = currentPendrive;
-      // detectChangeAndEmit(updatedPendrive, currentPendrive, "pendrive");
     }
   );
 };
@@ -384,17 +261,7 @@ const detectPrinter = () => {
 
       var printer = {};
       if (JSON.stringify(old_printer) != JSON.stringify(printer)) {
-        socket.emit("change", {
-          type: "printer",
-          event: "changed",
-          lengthOfData: Object.keys(printer).length,
-          item: printer,
-          comp_no,
-          comp_ip,
-          lab_no,
-          college,
-          department,
-        });
+        sendChangeSocket("Printer",`changed Printer`,Object.keys(printer).length,printer,true);
       }
     }
   );
@@ -437,10 +304,7 @@ detectKeyboard();
 detectPrinter();
 
 socket.on("askDeviceInfo", (data) => {
-  console.log("got request on client");
-  console.log("askDeviceInfo", data);
   socket.emit("deviceInfo", { data: globalJSON, sendTo: data.askedBy });
-  console.log("sent deviceInfo", globalJSON);
 });
 
 const time = 3000;
@@ -448,3 +312,8 @@ setInterval(detectPendrive, time);
 setInterval(detectMouse, time);
 setInterval(detectKeyboard, time);
 setInterval(detectPrinter, time);
+
+process.on("uncaughtException", (err) => {
+	console.log("an uncaught error caught is " + err);
+	console.log(err.stack);
+});
